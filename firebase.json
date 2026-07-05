@@ -1,0 +1,18 @@
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "razorpay-v2",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firestore-debug.log",
+        "ui-debug.log"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

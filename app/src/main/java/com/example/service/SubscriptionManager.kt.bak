@@ -1,0 +1,258 @@
+package com.example.service
+
+import android.content.Context
+import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+object SubscriptionManager {
+    private const val TAG = "SubscriptionManager"
+    
+    // Real-time observable state flows
+    private val _isPro = MutableStateFlow(false)
+    val isPro = _isPro.asStateFlow()
+    
+    private val _isParent = MutableStateFlow(false)
+    val isParent = _isParent.asStateFlow()
+    
+    private val _status = MutableStateFlow("Inactive")
+    val status = _status.asStateFlow()
+    
+    private val _currentPlan = MutableStateFlow("Free Tier")
+    val currentPlan = _currentPlan.asStateFlow()
+    
+    private val _subscriptionId = MutableStateFlow("")
+    val subscriptionId = _subscriptionId.asStateFlow()
+    
+    private val _paymentId = MutableStateFlow("")
+    val paymentId = _paymentId.asStateFlow()
+    
+    private val _activatedAt = MutableStateFlow(0L)
+    val activatedAt = _activatedAt.asStateFlow()
+    
+    private val _nextDueDate = MutableStateFlow(0L)
+    val nextDueDate = _nextDueDate.asStateFlow()
+    
+    private var subscriptionListener: ListenerRegistration? = null
+
+    // Initialize/Startup verification
+    fun init(context: Context) {
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+        if (currentUser != null) {
+            setupRealtimeSubscriptionListener(currentUser.uid)
+        } else {
+            resetSubscriptionState()
+        }
+        
+        // Setup listener for user logins/sign-outs
+        auth.addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            if (user != null) {
+                setupRealtimeSubscriptionListener(user.uid)
+            } else {
+                teardownListener()
+                resetSubscriptionState()
+            }
+        }
+    }
+
+    // Helper functions as requested
+    fun isProUser(): Boolean {
+        return _isPro.value
+    }
+    
+    fun isParentUser(): Boolean {
+        return _isParent.value
+    }
+    
+    fun getSubscriptionStatus(): String {
+        return _status.value
+    }
+    
+    fun getCurrentPlan(): String {
+        return _currentPlan.value
+    }
+
+    // Razorpay success event handler that updates Firestore document subscriptions/{uid}
+    fun handlePaymentSuccess(
+        context: Context,
+        planType: String, // "Focus Pro" or "Focus Parent"
+        razorpaySubscriptionId: String,
+        razorpayPaymentId: String,
+        onFinished: (Boolean, String?) -> Unit
+    ) {
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            onFinished(false, "User not authenticated in Firebase.")
+            return
+        }
+        
+        val uid = currentUser.uid
+        val firestore = FirebaseFirestore.getInstance()
+        val activatedTime = System.currentTimeMillis()
+        val expiryTime = activatedTime + (30L * 24 * 60 * 60 * 1000) // 30 Day billing cycle
+        
+        val subscriptionData = hashMapOf(
+            "status" to "Active",
+            "planType" to planType,
+            "subscriptionId" to razorpaySubscriptionId,
+            "paymentId" to razorpayPaymentId,
+            "activatedAt" to activatedTime,
+            "nextDueDate" to expiryTime,
+            "expiryDate" to expiryTime,
+            "currency" to "INR"
+        )
+        
+        firestore.collection("subscriptions").document(uid)
+            .set(subscriptionData)
+            .addOnSuccessListener {
+                Log.i(TAG, "Successfully synced subscription doc with Firestore!")
+                updateLocalState(
+                    statusValue = "Active",
+                    planTypeVal = planType,
+                    subIdVal = razorpaySubscriptionId,
+                    payIdVal = razorpayPaymentId,
+                    activatedVal = activatedTime,
+                    dueVal = expiryTime
+                )
+                onFinished(true, null)
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed syncing subscription doc to Firestore", e)
+                onFinished(false, e.message ?: "Firestore write error")
+            }
+    }
+
+    // Simulate different subscription statuses (Active, Cancelled, Expired, Paused, Halted) for management
+    fun simulateSubscriptionChange(
+        newStatus: String,
+        onFinished: (Boolean) -> Unit
+    ) {
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            onFinished(false)
+            return
+        }
+        
+        val firestore = FirebaseFirestore.getInstance()
+        val uid = currentUser.uid
+        
+        firestore.collection("subscriptions").document(uid)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.exists()) {
+                    firestore.collection("subscriptions").document(uid)
+                        .update("status", newStatus)
+                        .addOnSuccessListener { onFinished(true) }
+                        .addOnFailureListener { onFinished(false) }
+                } else {
+                    // Create new document first
+                    val activatedTime = System.currentTimeMillis()
+                    val expiryTime = activatedTime + (30L * 24 * 60 * 60 * 1000)
+                    val subscriptionData = hashMapOf(
+                        "status" to newStatus,
+                        "planType" to "Focus Pro",
+                        "subscriptionId" to "sub_sim_rc_${System.currentTimeMillis() / 1000}",
+                        "paymentId" to "pay_sim_rc_${System.currentTimeMillis() / 1000}",
+                        "activatedAt" to activatedTime,
+                        "nextDueDate" to expiryTime,
+                        "expiryDate" to expiryTime,
+                        "currency" to "INR"
+                    )
+                    firestore.collection("subscriptions").document(uid)
+                        .set(subscriptionData)
+                        .addOnSuccessListener { onFinished(true) }
+                        .addOnFailureListener { onFinished(false) }
+                }
+            }
+            .addOnFailureListener {
+                onFinished(false)
+            }
+    }
+
+    private fun setupRealtimeSubscriptionListener(uid: String) {
+        teardownListener()
+        val firestore = FirebaseFirestore.getInstance()
+        subscriptionListener = firestore.collection("subscriptions").document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Error listening to subscription updates", error)
+                    return@addSnapshotListener
+                }
+                
+                if (snapshot != null && snapshot.exists()) {
+                    val statusValue = snapshot.getString("status") ?: "Inactive"
+                    val planTypeVal = snapshot.getString("planType") ?: "Free Tier"
+                    val subIdVal = snapshot.getString("subscriptionId") ?: ""
+                    val payIdVal = snapshot.getString("paymentId") ?: ""
+                    val activatedVal = snapshot.getLong("activatedAt") ?: 0L
+                    val dueVal = snapshot.getLong("nextDueDate") ?: 0L
+                    
+                    updateLocalState(
+                        statusValue = statusValue,
+                        planTypeVal = planTypeVal,
+                        subIdVal = subIdVal,
+                        payIdVal = payIdVal,
+                        activatedVal = activatedVal,
+                        dueVal = dueVal
+                    )
+                } else {
+                    resetSubscriptionState()
+                }
+            }
+    }
+
+    private fun updateLocalState(
+        statusValue: String,
+        planTypeVal: String,
+        subIdVal: String,
+        payIdVal: String,
+        activatedVal: Long,
+        dueVal: Long
+    ) {
+        _status.value = statusValue
+        _currentPlan.value = planTypeVal
+        _subscriptionId.value = subIdVal
+        _paymentId.value = payIdVal
+        _activatedAt.value = activatedVal
+        _nextDueDate.value = dueVal
+        
+        if (statusValue == "Active") {
+            if (planTypeVal.equals("Focus Parent", ignoreCase = true)) {
+                _isPro.value = true
+                _isParent.value = true
+            } else if (planTypeVal.equals("Focus Pro", ignoreCase = true)) {
+                _isPro.value = true
+                _isParent.value = false
+            } else {
+                _isPro.value = false
+                _isParent.value = false
+            }
+        } else {
+            _isPro.value = false
+            _isParent.value = false
+        }
+    }
+
+    private fun teardownListener() {
+        subscriptionListener?.remove()
+        subscriptionListener = null
+    }
+
+    private fun resetSubscriptionState() {
+        _isPro.value = false
+        _isParent.value = false
+        _status.value = "Inactive"
+        _currentPlan.value = "Free Tier"
+        _subscriptionId.value = ""
+        _paymentId.value = ""
+        _activatedAt.value = 0L
+        _nextDueDate.value = 0L
+    }
+}

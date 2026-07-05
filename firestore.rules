@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Strict rules for subscriptions:
+    // Clients can read their own subscriptions to verify premium state.
+    // Absolutely NO direct client-side write (create, update, delete) is allowed.
+    // Subscription updates must be driven solely from Firebase Admin SDK (Cloud Functions)
+    match /subscriptions/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // Deny all direct client-side writes
+    }
+    
+    // Prevent client access to processed payments log
+    match /processed_payments/{paymentId} {
+      allow read, write: if false;
+    }
+    
+    // Default rules for standard users
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

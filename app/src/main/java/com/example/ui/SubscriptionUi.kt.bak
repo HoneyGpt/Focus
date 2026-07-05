@@ -1,0 +1,732 @@
+package com.example.ui
+
+import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.service.SubscriptionManager
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SubscriptionManagementScreen(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val status by SubscriptionManager.status.collectAsStateWithLifecycle()
+    val currentPlan by SubscriptionManager.currentPlan.collectAsStateWithLifecycle()
+    val subscriptionId by SubscriptionManager.subscriptionId.collectAsStateWithLifecycle()
+    val activatedAt by SubscriptionManager.activatedAt.collectAsStateWithLifecycle()
+    val nextDueDate by SubscriptionManager.nextDueDate.collectAsStateWithLifecycle()
+    
+    val scope = rememberCoroutineScope()
+    var showCheckoutPlan by remember { mutableStateOf<String?>(null) } // "Focus Pro" or "Focus Parent"
+    var showSimulateStatusDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFFFEF7FF))
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Back Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color(0xFF1D1B20)
+                )
+            }
+            Text(
+                text = "Premium Plans",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = Color(0xFF1D1B20),
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        // Current Plan Status Card
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Color(0xFFEADDFF))
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Current Status",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFF49454F)
+                    )
+                    
+                    val badgeColor = when (status) {
+                        "Active" -> Color(0xFF4CAF50)
+                        "Cancelled" -> Color(0xFFFF9800)
+                        "Expired" -> Color(0xFFF44336)
+                        "Paused", "Halted" -> Color(0xFF2196F3)
+                        else -> Color(0xFF9E9E9E)
+                    }
+                    Surface(
+                        color = badgeColor.copy(alpha = 0.15f),
+                        contentColor = badgeColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = status.uppercase(),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = currentPlan,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
+                    color = Color(0xFF6750A4)
+                )
+
+                if (status != "Inactive" && subscriptionId.isNotEmpty()) {
+                    Divider(color = Color(0xFFCAC4D0).copy(alpha = 0.5f))
+                    
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Subscription ID", style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F))
+                            Text(subscriptionId, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                        }
+                        if (activatedAt > 0L) {
+                            val activeStr = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(activatedAt))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                "Activation Date".let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F)) }
+                                Text(activeStr, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                            }
+                        }
+                        if (nextDueDate > 0L) {
+                            val dueStr = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(nextDueDate))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (status == "Cancelled") "Accessible Until" else "Next Renewal Date", style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F))
+                                Text(dueStr, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Simulated Controls for Testing / Demo Subscription statuses
+        Text(
+            text = "DEMO SIMULATION PLATFORM",
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold),
+            color = Color(0xFF6750A4),
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { showSimulateStatusDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCAC4D0)),
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Tune, contentDescription = "", modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Change Status", fontSize = 12.sp)
+            }
+            
+            if (status == "Active") {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            SubscriptionManager.simulateSubscriptionChange("Cancelled") { success ->
+                                if (success) {
+                                    Toast.makeText(context, "Subscription marked as Cancelled", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBA1A1A)),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Cancel, contentDescription = "", modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Simulate Cancel", fontSize = 12.sp)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Plan Grid
+        Text(
+            text = "CHOOSE YOUR PLAN",
+            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp, fontWeight = FontWeight.Bold),
+            color = Color(0xFF1D1B20)
+        )
+
+        // Focus Pro Card
+        PremiumPlanCard(
+            planName = "Focus Pro",
+            price = "₹99/mo",
+            description = "Empower your study routine with raw diagnostic metrics, deep isolation layers, and personal accountability safeguards.",
+            highlights = listOf(
+                "Unlimited Focus Sessions (Sprints)",
+                "Custom Intercept Blacklists",
+                "Advanced Parental Passcode Protection",
+                "Unlimited Foci AI Coaching Access"
+            ),
+            icon = Icons.Default.FlashOn,
+            isSelected = currentPlan.equals("Focus Pro", ignoreCase = true) && status == "Active",
+            onPurchaseClick = { showCheckoutPlan = "Focus Pro" }
+        )
+
+        // Focus Parent Card
+        PremiumPlanCard(
+            planName = "Focus Parent",
+            price = "₹299/mo",
+            description = "Get professional analytics to help build habits alongside your children. Includes all Pro level features for students.",
+            highlights = listOf(
+                "Secure Student Cloud Coupling",
+                "On-Demand Application Monitoring",
+                "Weekly Distribution Reports",
+                "PDF Summaries Exportation",
+                "Everything in Focus Pro"
+            ),
+            icon = Icons.Default.SupervisorAccount,
+            isSelected = currentPlan.equals("Focus Parent", ignoreCase = true) && status == "Active",
+            onPurchaseClick = { showCheckoutPlan = "Focus Parent" }
+        )
+    }
+
+    // Checkout Sheet / Simulated Razorpay Sheet
+    if (showCheckoutPlan != null) {
+        RazorpayCheckoutSimulatorDialog(
+            planType = showCheckoutPlan!!,
+            amountINR = if (showCheckoutPlan == "Focus Pro") 99 else 299,
+            onSuccess = { subId, payId ->
+                SubscriptionManager.handlePaymentSuccess(
+                    context = context,
+                    planType = showCheckoutPlan!!,
+                    razorpaySubscriptionId = subId,
+                    razorpayPaymentId = payId
+                ) { success, err ->
+                    showCheckoutPlan = null
+                    if (success) {
+                        Toast.makeText(context, "Welcome to $showCheckoutPlan! Premium unlocked.", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, "Error saving subscription: $err", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onDismiss = { showCheckoutPlan = null }
+        )
+    }
+
+    // Simulate Custom Status Dialog
+    if (showSimulateStatusDialog) {
+        Dialog(onDismissRequest = { showSimulateStatusDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Simulate Sub Status", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    
+                    val statuses = listOf("Active", "Cancelled", "Expired", "Paused", "Halted")
+                    statuses.forEach { item ->
+                        Button(
+                            onClick = {
+                                showSimulateStatusDialog = false
+                                scope.launch {
+                                    SubscriptionManager.simulateSubscriptionChange(item) { success ->
+                                        if (success) {
+                                            Toast.makeText(context, "Status set to $item", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4).copy(alpha = 0.1f), contentColor = Color(0xFF6750A4)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(item)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumPlanCard(
+    planName: String,
+    price: String,
+    description: String,
+    highlights: List<String>,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onPurchaseClick: () -> Unit
+) {
+    val containerColor = if (isSelected) Color(0xFFEADDFF).copy(alpha = 0.4f) else Color.White
+    val borderColor = if (isSelected) Color(0xFF6750A4) else Color(0xFFEADDFF)
+    val borderWeight = if (isSelected) 2.dp else 1.dp
+
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(borderWeight, borderColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF6750A4).copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(icon, contentDescription = null, tint = Color(0xFF6750A4), modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(planName, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                }
+                
+                Text(price, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold), color = Color(0xFF6750A4))
+            }
+
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF49454F))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                highlights.forEach { tag ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF6750A4), modifier = Modifier.size(18.dp))
+                        Text(tag, style = MaterialTheme.typography.bodyMedium, color = Color(0xFF1D1B20))
+                    }
+                }
+            }
+
+            Button(
+                onClick = onPurchaseClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSelected) Color(0xFF6750A4).copy(alpha = 0.15f) else Color(0xFF6750A4),
+                    contentColor = if (isSelected) Color(0xFF6750A4) else Color.White
+                )
+            ) {
+                Text(
+                    text = if (isSelected) "Active Plan" else "Subscribe Now ($price)",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RazorpayCheckoutSimulatorDialog(
+    planType: String,
+    amountINR: Int,
+    onSuccess: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var loadingPay by remember { mutableStateOf(false) }
+    var selectedMethod by remember { mutableStateOf("UPI") } // "UPI", "CARD", "NETBANKING"
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            border = BorderStroke(1.dp, Color(0xFFEADDFF))
+        ) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header with Razorpay logo
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "Razorpay Secure",
+                            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.5.sp),
+                            color = Color(0xFF0052CC)
+                        )
+                        Text(
+                            text = "Focus App Checkout",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFF1D1B20)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .background(Color(0xFF0A1F44), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "razorpay",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                Divider(color = Color(0xFFEADDFF))
+
+                // Price details
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF7F2FA), RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(planType, style = MaterialTheme.typography.labelMedium, color = Color(0xFF49454F))
+                        Text("Recurring Monthly Subscription", style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "₹$amountINR.00",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                        color = Color(0xFF6750A4),
+                        maxLines = 1
+                    )
+                }
+
+                if (loadingPay) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF0052CC))
+                        Text("Authorizing transaction securely...", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF49454F))
+                    }
+                } else {
+                    Text("Payment Methods", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                    
+                    // UPI
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, if (selectedMethod == "UPI") Color(0xFF0052CC) else Color(0xFFEADDFF), RoundedCornerShape(12.dp))
+                            .clickable { selectedMethod = "UPI" }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.QrCode, contentDescription = null, tint = if (selectedMethod == "UPI") Color(0xFF0052CC) else Color(0xFF49454F))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("BHIM UPI / GooglePay", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                            Text("Instant auto-pay check via application", style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F))
+                        }
+                    }
+
+                    // Card
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, if (selectedMethod == "CARD") Color(0xFF0052CC) else Color(0xFFEADDFF), RoundedCornerShape(12.dp))
+                            .clickable { selectedMethod = "CARD" }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.CreditCard, contentDescription = null, tint = if (selectedMethod == "CARD") Color(0xFF0052CC) else Color(0xFF49454F))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Credit / Debit / ATM Card", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                            Text("Visa, Mastercard, RuPay supported", style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F))
+                        }
+                    }
+
+                    // Netbanking
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, if (selectedMethod == "NETBANKING") Color(0xFF0052CC) else Color(0xFFEADDFF), RoundedCornerShape(12.dp))
+                            .clickable { selectedMethod = "NETBANKING" }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.AccountBalance, contentDescription = null, tint = if (selectedMethod == "NETBANKING") Color(0xFF0052CC) else Color(0xFF49454F))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Net Banking", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = Color(0xFF1D1B20))
+                            Text("Select from all Indian major banks", style = MaterialTheme.typography.bodySmall, color = Color(0xFF49454F))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Cancel")
+                        }
+                        
+                        Button(
+                            onClick = {
+                                loadingPay = true
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    loadingPay = false
+                                    val rSubId = "sub_rzp_" + SimpleDateFormat("hhmmssSSS", Locale.getDefault()).format(Date())
+                                    val rPayId = "pay_rzp_" + SimpleDateFormat("SSSsshhmm", Locale.getDefault()).format(Date())
+                                    onSuccess(rSubId, rPayId)
+                                }, 1500)
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0052CC))
+                        ) {
+                            Text("Pay ₹$amountINR.00")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumPaywallDialog(
+    requiredPlan: String = "Focus Pro",
+    onDismiss: () -> Unit,
+    onNavigateToPlans: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+    ) {
+        Card(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            border = BorderStroke(1.dp, Color(0xFFEADDFF))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Crown Hero Icon
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF6750A4).copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Stars,
+                        contentDescription = "Subscription crown icon",
+                        tint = Color(0xFF6750A4),
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                Text(
+                    text = "Upgrade to $requiredPlan",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF1D1B20),
+                    textAlign = TextAlign.Center
+                )
+
+                val detailsText = if (requiredPlan == "Focus Parent") {
+                    "Live session tracking, PDF summaries, and comprehensive child study metrics require a Focus Parent cloud subscription."
+                } else {
+                    "Unlock custom app blocking tools, uncompromised passcode protection, infinite study timers, and unlimited coach AI credits with Focus Pro."
+                }
+
+                Text(
+                    text = detailsText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF49454F),
+                    textAlign = TextAlign.Center
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            onNavigateToPlans()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("View Pricing Plans", fontWeight = FontWeight.Bold)
+                    }
+                    
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Maybe Later", color = Color(0xFF6750A4))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ParentUpgradePaywallPlaceholder(
+    innerPadding: PaddingValues,
+    onUpgradeClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)
+            .background(Color(0xFFFEF7FF))
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF6750A4).copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.SupervisorAccount,
+                contentDescription = null,
+                tint = Color(0xFF6750A4),
+                modifier = Modifier.size(44.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        Text(
+            text = "Focus Parent Required",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = Color(0xFF1D1B20),
+            textAlign = TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Text(
+            text = "Setup secure parent-child device sync, monitor study sessions in real-time, get comprehensive study logs, and export PDF summaries with a Focus Parent subscription.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFF49454F),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Button(
+            onClick = onUpgradeClick,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Icon(Icons.Default.Stars, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Unlock Focus Parent (₹299/mo)", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        }
+    }
+}

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "691037183659",
+    "project_id": "green-bedrock-473114-d4",
+    "storage_bucket": "green-bedrock-473114-d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691037183659:android:16b11dcb1a2865e74ba1ee",
+        "android_client_info": {
+          "package_name": "com.aistudio.focus.shkwpy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691037183659-kej8ij42ocmg67jamptid1534e345mhk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.focus.shkwpy",
+            "certificate_hash": "25830f9539f207ab1250003028cc861ad17167c3"
+          }
+        },
+        {
+          "client_id": "691037183659-atuseru42b36omjo0duc0hoike1ehfdf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDy4-RrS2ChSLBwz8NqAZElt8v-Wxhu7jk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "691037183659-atuseru42b36omjo0duc0hoike1ehfdf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

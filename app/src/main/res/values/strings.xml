@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Focus</string>
+    <string name="accessibility_description">Required to detect and overlay block screen when distracting apps like YouTube, Instagram, or TikTok are opened during a deep focus session.</string>
+</resources>
