@@ -1,42 +1,227 @@
-# Focus — Productivity & Lock App
+# 📱 Focus — AI-Powered Productivity & Digital Wellness App
 
-Focus is an Android application designed to help users block distractions, maintain productivity streaks, and achieve study goals. It integrates Gemini AI for dynamic inspiration and Firebase for remote monitoring and cloud synchronization.
+**Focus** is an Android productivity application built to help students and professionals eliminate distractions, build consistent study habits, and stay accountable through intelligent focus sessions.
 
----
-
-## Features
-
-- ⏱️ **Focus Sessions**: Start focus sessions with configurable durations and study topics.
-- 🚫 **App Blocker**: Block distracting applications and games during focus sessions to avoid interruption.
-- 🔔 **Notification Muter**: Automatically mute distracting notifications during active focus.
-- 🔑 **Lock Mode**: Prevent premature termination of focus sessions with passcode protection.
-- 🤖 **Gemini AI Integration**: Receive personalized, AI-driven motivational quotes tailored to your study topics.
-- 🏆 **Gamification & Rewards**: Earn streaks and track achievements based on your focus history.
-- ☁️ **Firebase Synchronization**: Sync your stats and study history to the cloud. Includes roles for both Students and Parents.
+Powered by **Firebase** and **Google Gemini AI**, Focus combines app blocking, session tracking, cloud synchronization, and AI-powered motivation into a single productivity platform.
 
 ---
 
-## Getting Started
+# ✨ Features
 
-### Prerequisites
-- [Android Studio](https://developer.android.com/studio) (latest version recommended)
-- Android SDK 34 or higher
+## 🎯 Focus Sessions
 
-### Local Setup & Installation
+* Create customizable focus sessions.
+* Select study topics and session duration.
+* Track completed sessions and productivity history.
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/HoneyGpt/Focus.git
-   cd Focus
-   ```
+## 🚫 Smart App Blocking
 
-2. **Open in Android Studio**:
-   - Launch Android Studio, select **Open**, and navigate to the project directory.
+* Block distracting applications during focus sessions.
+* Prevent access to social media, games, and selected apps.
+* Automatically restore access when the session ends.
 
-3. **Configure Environment Variables**:
-   - Create a `.env` file in the root directory based on `.env.example`.
-   - Add your `GEMINI_API_KEY`, Firebase keys, and Google OAuth credentials.
+## 🔕 Notification Control
 
-4. **Run the Project**:
-   - Connect a physical Android device or start an emulator.
-   - Click **Run** (or `Shift + F10`) in Android Studio.
+* Reduce interruptions by muting distracting notifications.
+* Keep only essential notifications available while studying.
+
+## 🔒 Lock Mode
+
+* Prevent accidental or intentional session termination.
+* Optional passcode protection for stronger commitment.
+
+## 🤖 AI Study Coach
+
+Powered by **Google Gemini AI**
+
+* Personalized motivation
+* Study guidance
+* Productivity suggestions
+* Topic-based encouragement
+* Monthly AI coaching credits
+
+## ☁️ Firebase Cloud Sync
+
+* Secure authentication
+* Cloud Firestore synchronization
+* Real-time subscription updates
+* Student and Parent account support
+
+## 👨‍👩‍👧 Parent Dashboard
+
+* Monitor linked student accounts
+* View productivity statistics
+* Track focus sessions
+* Support healthy digital habits
+
+## 💳 Premium Subscriptions
+
+Powered by **Razorpay**
+
+### Focus Pro
+
+* Unlimited focus sessions
+* Smart app blocking
+* Advanced productivity analytics
+* 35 AI coaching credits per month
+
+### Focus Parent
+
+Includes everything in **Focus Pro**, plus:
+
+* Parent Dashboard
+* Linked student premium access
+* Family productivity management
+* 35 AI coaching credits per month
+
+---
+
+# 🏗️ Tech Stack
+
+| Category       | Technology                |
+| -------------- | ------------------------- |
+| Language       | Kotlin                    |
+| UI             | Jetpack Compose           |
+| Backend        | Firebase Functions        |
+| Database       | Cloud Firestore           |
+| Authentication | Firebase Authentication   |
+| Payments       | Razorpay Subscription API |
+| AI             | Google Gemini             |
+| Cloud          | Firebase                  |
+| Architecture   | MVVM                      |
+
+---
+
+# 🚀 Getting Started
+
+## Prerequisites
+
+* Android Studio (Latest Stable)
+* Android SDK 34+
+* JDK 17+
+* Firebase Project
+* Google Gemini API Key
+* Razorpay Account (optional for premium features)
+
+---
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/HoneyGpt/Focus.git
+cd Focus
+```
+
+---
+
+## Open the Project
+
+Open the project in **Android Studio** and allow Gradle to synchronize.
+
+---
+
+## Firebase Configuration
+
+1. Create a Firebase project.
+2. Add your Android application.
+3. Download `google-services.json`.
+4. Place it inside:
+
+```
+app/google-services.json
+```
+
+---
+
+## Configure Environment
+
+The project uses Firebase Cloud Functions and Secret Manager.
+
+Configure:
+
+* Firebase Authentication
+* Firestore
+* Cloud Functions
+* Gemini API
+* Razorpay (optional)
+
+Sensitive credentials should **never** be committed to GitHub.
+
+---
+
+## Run the App
+
+1. Connect an Android device or emulator.
+2. Build the project.
+3. Press **Run**.
+
+---
+
+# 📂 Project Structure
+
+```
+Focus/
+│
+├── app/
+│   ├── ui/
+│   ├── service/
+│   ├── viewmodel/
+│   ├── data/
+│   └── utils/
+│
+├── functions/
+│   ├── index.js
+│   ├── package.json
+│   └── ...
+│
+├── firestore.rules
+├── firebase.json
+└── README.md
+```
+
+---
+
+# 🔒 Security
+
+* Firebase Authentication
+* Firestore Security Rules
+* Firebase Secret Manager
+* Backend payment verification
+* Razorpay webhook verification
+* Server-side signature validation
+
+---
+
+# 📈 Roadmap
+
+* [ ] Cross-device focus synchronization
+* [ ] Desktop companion
+* [ ] Wear OS support
+* [ ] Focus analytics dashboard
+* [ ] AI productivity reports
+* [ ] Collaborative study groups
+* [ ] Calendar integration
+
+---
+
+# 🤝 Contributing
+
+Contributions, feature suggestions, and bug reports are welcome.
+
+Feel free to fork the repository and submit a Pull Request.
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+# 👨‍💻 Developer
+
+**Harshita Bhaskaruni**
+
+Building AI-powered applications focused on productivity, education, and digital wellbeing.
+
+GitHub: https://github.com/HoneyGpt
